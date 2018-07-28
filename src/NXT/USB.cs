@@ -6,28 +6,6 @@ using System.Text;
 
 namespace Dandy.Devices.USB.Libusb
 {
-    enum ClassCode : byte
-    {
-        PerInterface = 0,
-        Audio = 1,
-        Comm = 2,
-        HID = 3,
-        Physical = 5,
-        Printer = 7,
-        PTP = 6,
-        Image = 6,
-        MassStorage = 8,
-        Hub = 9,
-        Data = 10,
-        SmartCard = 0x0b,
-        ContentSecurity = 0x0d,
-        Video = 0x0e,
-        PersonalHealthcare = 0x0f,
-        DiagnosticDevice = 0xdc,
-        Wireless = 0xe0,
-        Application = 0xfe,
-        VendorSpec = 0xff
-    }
 
     enum DescriptorType : byte
     {

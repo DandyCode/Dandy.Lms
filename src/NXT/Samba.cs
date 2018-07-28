@@ -44,12 +44,13 @@ namespace Dandy.LMS.NXT
         public void Find()
         {
             foreach (var dev in Device.List) {
-                if (dev.Descriptor.VendorId == idVendorAmtel && dev.Descriptor.ProductId == idProductSamba) {
+                var desc = dev.DeviceDescriptor;
+                if (desc.VendorId == idVendorAmtel && desc.ProductId == idProductSamba) {
                     this.dev = dev;
                     isInResetMode = true;
                     return;
                 }
-                if (dev.Descriptor.VendorId == idVendorLEGO && dev.Descriptor.ProductId == idProductNXT) {
+                if (desc.VendorId == idVendorLEGO && desc.ProductId == idProductNXT) {
                     this.dev = dev;
                     return;
                 }
