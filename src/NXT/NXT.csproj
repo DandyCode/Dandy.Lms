@@ -6,4 +6,8 @@
     <AssemblyName>Dandy.LMS.NXT</AssemblyName>
   </PropertyGroup>
 
+  <ItemGroup>
+    <PackageReference Include="Dandy.Devices.USB.Libusb" Version="1.0.0-a1" />
+  </ItemGroup>
+
 </Project>

@@ -37,25 +37,19 @@ namespace Dandy.LMS.NXT
         const ushort idVendorAmtel = 0x03eb;
         const ushort idProductSamba = 0x6124;
 
-        Context ctx;
         Device dev;
         DeviceHandle hdl;
         bool isInResetMode;
 
-        public Brick()
-        {
-            ctx = new Context();
-        }
-
         public void Find()
         {
-            foreach (var dev in new DeviceList()) {
-                if (dev.Descriptor.idVendor == idVendorAmtel && dev.Descriptor.idProduct == idProductSamba) {
+            foreach (var dev in Device.List) {
+                if (dev.Descriptor.VendorId == idVendorAmtel && dev.Descriptor.ProductId == idProductSamba) {
                     this.dev = dev;
                     isInResetMode = true;
                     return;
                 }
-                if (dev.Descriptor.idVendor == idVendorLEGO && dev.Descriptor.idProduct == idProductNXT) {
+                if (dev.Descriptor.VendorId == idVendorLEGO && dev.Descriptor.ProductId == idProductNXT) {
                     this.dev = dev;
                     return;
                 }
