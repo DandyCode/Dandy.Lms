@@ -2,20 +2,20 @@ using System;
 using System.Linq;
 using System.Runtime.InteropServices.WindowsRuntime;
 using System.Threading.Tasks;
-using Dandy.LMS.NXT;
+using Dandy.Lms.Nxt;
 using Windows.Storage;
 
 namespace Dandy.Lms.NxtFirmwareTool.Uwp
 {
     class Program
     {
-        static Brick nxt;
+        static IDisposable nxt;
 
-        static void handleError(ErrorException ex)
+        static void handleError(Exception ex)
         {
             Console.WriteLine("Error: {0}", ex.Message);
-            nxt?.Close();
-            Environment.Exit((int)ex.Error);
+            nxt?.Dispose();
+            Environment.Exit(1);
         }
 
         static async Task Main(string[] args)
@@ -35,38 +35,28 @@ namespace Dandy.Lms.NxtFirmwareTool.Uwp
                 Firmware.Validate(fwData);
                 Console.WriteLine("OK.");
             }
-            catch (ErrorException ex) {
+            catch (Exception ex) {
+                handleError(ex);
+            }
+
+            Samba device = null;
+
+            try {
+                var devices = await Samba.FindAllAsync();
+                device = devices.FirstOrDefault();
+                if (device == null) {
+                    Console.Error.WriteLine("NXT not found. Is it properly plugged in via USB?");
+                    Environment.Exit(1);
+                }
+            }
+            catch (Exception ex) {
                 handleError(ex);
             }
 
             try {
-                nxt = new Brick();
+                nxt = await device.OpenAsync();
             }
-            catch (ErrorException ex) {
-                handleError(ex);
-            }
-
-            try {
-                await nxt.Find();
-            }
-            catch (ErrorException ex) when (ex.Error == Error.NotPresent) {
-                Console.Error.WriteLine("NXT not found. Is it properly plugged in via USB?");
-                Environment.Exit(1);
-            }
-            catch (ErrorException ex) {
-                handleError(ex);
-            }
-
-            if (!nxt.IsInResetMode) {
-                Console.Error.WriteLine("NXT found, but not running in reset mode.");
-                Console.Error.WriteLine("Please reset your NXT manually and restart this program.");
-                Environment.Exit(2);
-            }
-
-            try {
-                await nxt.Open();
-            }
-            catch (ErrorException ex) {
+            catch (Exception ex) {
                 handleError(ex);
             }
 
@@ -74,27 +64,27 @@ namespace Dandy.Lms.NxtFirmwareTool.Uwp
             Console.WriteLine("Starting firmware flash procedure now...");
 
             try {
-                nxt.Flash(fwData);
+                await device.FlashAsync(fwData);
             }
-            catch (ErrorException ex) {
+            catch (Exception ex) {
                 handleError(ex);
             }
 
             Console.WriteLine("Firmware flash complete.");
 
             try {
-                nxt.Jump(0x00100000);
+                await device.GoAsync(0x00100000);
             }
-            catch (ErrorException ex) {
+            catch (Exception ex) {
                 handleError(ex);
             }
 
             Console.WriteLine("New firmware started!");
 
             try {
-                nxt.Close();
+                nxt.Dispose();
             }
-            catch (ErrorException ex) {
+            catch (Exception ex) {
                 handleError(ex);
             }
         }

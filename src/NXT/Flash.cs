@@ -1,4 +1,6 @@
-namespace Dandy.LMS.NXT
+using System.Threading.Tasks;
+
+namespace Dandy.Lms.Nxt
 {
     public static class Flash
     {
@@ -24,12 +26,12 @@ namespace Dandy.LMS.NXT
             Unlock = 0x4,
         }
 
-        public static void WaitReady(this Brick nxt)
+        public static async Task WaitReadyAsync(this Samba nxt)
         {
             uint status;
 
             do {
-                status = nxt.ReadWord(0xFFFFFF68);
+                status = await nxt.ReadWordAsync(0xFFFFFF68);
 
                 /* Bit 0 is the FRDY field. Set to 1 if the flash controller is
                 * ready to run a new command.
@@ -37,43 +39,43 @@ namespace Dandy.LMS.NXT
             } while ((status & 0x1) != 0x1);
         }
 
-        static void AlterLock(this Brick nxt, int regionNum, Commands cmd)
+        static async Task AlterLockAsync(this Samba nxt, int regionNum, Commands cmd)
         {
             var w =  0x5A000000 | (uint)((64 * regionNum) << 8);
             w += (uint)cmd;
 
-            nxt.WaitReady();
+            await nxt.WaitReadyAsync();
 
             /* Flash mode register: FCMN 0x5, FWS 0x1
              * Flash command register: KEY 0x5A, FCMD = clear-lock-bit (0x4)
              * Flash mode register: FCMN 0x34, FWS 0x1
              */
-            nxt.WriteWord(0xFFFFFF60, 0x00050100);
-            nxt.WriteWord(0xFFFFFF64, w);
-            nxt.WriteWord(0xFFFFFF60, 0x00340100);
+            await nxt.WriteWordAsync(0xFFFFFF60, 0x00050100);
+            await nxt.WriteWordAsync(0xFFFFFF64, w);
+            await nxt.WriteWordAsync(0xFFFFFF60, 0x00340100);
         }
 
-        static void LockRegion(this Brick nxt, int regionNum)
+        static Task LockRegionAsync(this Samba nxt, int regionNum)
         {
-            nxt.AlterLock(regionNum, Commands.Lock);
+            return nxt.AlterLockAsync(regionNum, Commands.Lock);
         }
 
-        static void UnlockRegion(this Brick nxt, int regionNum)
+        static Task UnlockRegion(this Samba nxt, int regionNum)
         {
-            nxt.AlterLock(regionNum, Commands.Unlock);
+            return nxt.AlterLockAsync(regionNum, Commands.Unlock);
         }
 
-        static void LockAllRegions(this Brick nxt)
+        static async Task LockAllRegionsAsync(this Samba nxt)
         {
             for (var i = 0; i < 16; i++) {
-                nxt.LockRegion(i);
+                await nxt.LockRegionAsync(i);
             }
         }
 
-        public static void UnlockAllRegions(this Brick nxt)
+        public static async Task UnlockAllRegionsAsync(this Samba nxt)
         {
             for (var i = 0; i < 16; i++) {
-                nxt.UnlockRegion(i);
+                await nxt.UnlockRegion(i);
             }
         }
     }

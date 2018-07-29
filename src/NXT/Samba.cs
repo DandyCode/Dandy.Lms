@@ -1,123 +1,76 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using Dandy.Devices.Serial;
-using Dandy.Devices.USB.Libusb;
 
-namespace Dandy.LMS.NXT
+namespace Dandy.Lms.Nxt
 {
-    public enum Error
+    public sealed class Samba
     {
-        Ok,
-        NotPresent,
-        Configuration,
-        InUse,
-        USBWrite,
-        USBRead,
-        SambaProtocol,
-        Handshake,
-        File,
-        InvalidFirmware,
-    }
-
-    public sealed class ErrorException : Exception
-    {
-        public ErrorException(Error error) : this(error, null)
-        {
-        }
-
-        public ErrorException(Error error, Exception innerException) : base(error.ToString(), innerException)
-        {
-            Error = error;
-        }
-
-        public Error Error { get; }
-    }
-
-    public sealed class Brick
-    {
-        const ushort idVendorLEGO = 0x0694;
-        const ushort idProductNXT = 0x0002;
-
         const ushort idVendorAmtel = 0x03eb;
         const ushort idProductSamba = 0x6124;
 
-        IDeviceInfo info;
-        IDevice device;
-        BinaryReader reader;
-        BinaryWriter writer;
-        bool isInResetMode;
+        DeviceInfo info;
+        Device device;
 
-        public async Task Find()
+        public static async Task<IEnumerable<Samba>> FindAllAsync()
         {
-            foreach (var info in await Factory.FindAllAsync()) {
-                if (info.UsbVendorId == idVendorAmtel && info.UsbProductId == idProductSamba) {
-                    this.info = info;
-                    isInResetMode = true;
-                    return;
-                }
-                if (info.UsbVendorId == idVendorLEGO && info.UsbProductId == idProductNXT) {
-                    this.info = info;
-                    return;
-                }
-            }
-
-            throw new ErrorException(Error.NotPresent);
+            var factory = Factory.GetFactoryForOSPlatform();
+            var devices = await factory.FindAllAsync(idVendorAmtel, idProductSamba);
+            return devices.Select(d => new Samba(d));
         }
 
-        public async Task<object> Open()
+        Samba(DeviceInfo info)
+        {
+            this.info = info;
+        }
+
+        public async Task<IDisposable> OpenAsync()
         {
             device = await info.OpenAsync();
-            if (device == null) {
-                throw new ErrorException(Error.Configuration);
-            }
-            reader = new BinaryReader(device.InputStream, Encoding.ASCII);
-            writer = new BinaryWriter(device.OutputStream, Encoding.ASCII);
+            device.InputStream.ReadTimeout = 500;
+            device.OutputStream.WriteTimeout = 500;
 
             // NXT handshake
-            SendStr("N#");
-            var buf = RecvBuf(2);
+            await SetNormalModeAsync();
+            var buf = await ReadBytesAsync(2);
             if (buf[0] != '\n' || buf[1] != '\r') {
                 device.Dispose();
                 device = null;
-                throw new ErrorException(Error.Handshake);
+                throw new IOException("Did not respond to handshake");
             }
 
-            return null;
+            return device;
         }
 
-        public void Close()
+        async Task WriteBytesAsync(byte[] buf)
         {
-            reader?.Dispose();
-            writer?.Dispose();
-            device?.Dispose();
-            device = null;
+            await device.OutputStream.WriteAsync(buf, 0, buf.Length);
+            await device.OutputStream.FlushAsync();
         }
 
-        public bool IsInResetMode => isInResetMode;
-
-        void SendBuf(byte[] buf)
+        async Task WriteStringAsync(string str)
         {
-            writer.Write(buf, 0, buf.Length);
-            writer.Flush();
+            var buf = Encoding.ASCII.GetBytes(str);
+            await WriteBytesAsync(buf);
         }
 
-        void SendStr(string str)
+        async Task<byte[]> ReadBytesAsync(int len)
         {
-            writer.Write(str);
-            writer.Flush();
-        }
-
-        byte[] RecvBuf(int len)
-        {
-            var buf = reader.ReadBytes(len);
+            var buf = new byte[len];
+            var bytesRead = 0;
+            while (bytesRead < len) {
+                bytesRead += await device.InputStream.ReadAsync(buf, bytesRead, len - bytesRead);
+            }
             return buf;
         }
 
-        static string FormatCommand(char cmd, uint addr, uint word)
+        static string FormatCommand(char cmd, uint addr, uint w)
         {
-            return string.Format("{0}{1:X8},{2:X8}#", cmd, addr, word);
+            return string.Format("{0}{1:X8},{2:X8}#", cmd, addr, w);
         }
 
         static string FormatCommand(char cmd, uint addr)
@@ -125,82 +78,89 @@ namespace Dandy.LMS.NXT
             return string.Format("{0}{1:X8}#", cmd, addr);
         }
 
-        void WriteCommon(char type, uint addr, uint w)
+        public Task SetNormalModeAsync()
         {
-            var cmd = FormatCommand(type, addr, w);
-            SendStr(cmd);
+            return WriteStringAsync("N#");
         }
 
-        public void WriteByte(uint addr, byte b)
+        public Task SetTerminalModeAsync()
         {
-            WriteCommon('O', addr, b);
+            return WriteStringAsync("T#");
         }
 
-        public void WriteHWord(uint addr, ushort hw)
+        public Task WriteByteAsync(uint addr, byte b)
         {
-            WriteCommon('H', addr, hw);
+            var cmd = string.Format("O{0:X8},{1:X2}#", addr, b);
+            return WriteStringAsync(cmd);
         }
 
-        public void WriteWord(uint addr, uint w)
+        public Task WriteHalfWordAsync(uint addr, ushort hw)
         {
-            WriteCommon('W', addr, w);
+            var cmd = string.Format("H{0:X8},{1:X4}#", addr, hw);
+            return WriteStringAsync(cmd);
         }
 
-        byte[] ReadCommon(char cmd, int len, uint addr)
+        public Task WriteWordAsync(uint addr, uint w)
+        {
+            var cmd = string.Format("W{0:X8},{1:X8}#", addr, w);
+            return WriteStringAsync(cmd);
+        }
+
+        async Task<byte[]> ReadAsync(char cmd, int len, uint addr)
         {
             var c = FormatCommand(cmd, addr, (uint)len);
-            SendStr(c);
-            var buf = RecvBuf(len);
-            // TODO: convert from little-endian to CPU-endian
+            await WriteStringAsync(c);
+            var buf = await ReadBytesAsync(len);
             return buf;
         }
 
-        public byte ReadByte(uint addr)
+        public async Task<byte> ReadByteAysnc(uint addr)
         {
-            var buf = ReadCommon('o', 1, addr);
+            var buf = await ReadAsync('o', 1, addr);
             return buf[0];
         }
 
-        public ushort ReadHWord(uint addr)
+        public async Task<ushort> ReadHalfWordAsync(uint addr)
         {
-            var buf = ReadCommon('h', 2, addr);
+            var buf = await ReadAsync('h', 2, addr);
             if (!BitConverter.IsLittleEndian)
                 Array.Reverse(buf);
             return BitConverter.ToUInt16(buf, 0);
         }
 
-        public uint ReadWord(uint addr)
+        public async Task <uint> ReadWordAsync(uint addr)
         {
-            var buf = ReadCommon('w', 4, addr);
+            var buf = await ReadAsync('w', 4, addr);
             if (!BitConverter.IsLittleEndian)
                 Array.Reverse(buf);
             return BitConverter.ToUInt32(buf, 0);
         }
 
-        public void SendFile(uint addr, byte[] file)
+        public async Task SendFileAsync(uint addr, byte[] file)
         {
             var cmd = FormatCommand('S', addr, (uint)file.Length);
-            SendStr(cmd);
-            SendBuf(file);
+            await WriteStringAsync(cmd);
+            await WriteBytesAsync(file);
         }
 
-        public byte[] RecvFile(uint addr, int len)
+        public async Task<byte[]> ReceiveFileAsync(uint addr, int len)
         {
             var cmd = FormatCommand('R', addr, (uint)len);
-            SendStr(cmd);
-            return RecvBuf(len + 1);
+            await WriteStringAsync(cmd);
+            var buf = await ReadBytesAsync(len + 1);
+            return buf;
         }
 
-        public void Jump(uint addr)
+        public Task GoAsync(uint addr)
         {
-            var cmd = FormatCommand('G', addr);
-            SendStr(cmd);
+            var cmd = string.Format("G{0:X8}#", addr);
+            return WriteStringAsync(cmd);
         }
 
-        public Version SambaVersion()
+        public async Task<Version> DisplayVersionAsync()
         {
-            SendStr("V#");
-            var buf = RecvBuf(4);
+            await WriteStringAsync("V#");
+            var buf = await ReadBytesAsync(4);
             var str = Encoding.ASCII.GetString(buf);
             return new Version(str);
         }

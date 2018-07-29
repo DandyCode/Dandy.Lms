@@ -125,16 +125,16 @@
   </ItemGroup>
   <ItemGroup>
     <PackageReference Include="Dandy.Devices.Serial.Uwp">
-      <Version>1.0.0-a1</Version>
+      <Version>1.0.0-a1.2</Version>
     </PackageReference>
     <PackageReference Include="Microsoft.NETCore.UniversalWindowsPlatform">
       <Version>6.1.5</Version>
     </PackageReference>
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="..\..\src\NXT\NXT.csproj">
+    <ProjectReference Include="..\..\src\NXT\Nxt.csproj">
       <Project>{99a25eef-f55d-42b5-98a0-cce21dc70fe2}</Project>
-      <Name>NXT</Name>
+      <Name>Nxt</Name>
     </ProjectReference>
   </ItemGroup>
   <PropertyGroup Condition=" '$(VisualStudioVersion)' == '' or '$(VisualStudioVersion)' &lt; '14.0' ">
