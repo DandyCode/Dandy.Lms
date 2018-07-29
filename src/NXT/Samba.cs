@@ -1,6 +1,8 @@
 ﻿using System;
+using System.IO;
 using System.Text;
-
+using System.Threading.Tasks;
+using Dandy.Devices.Serial;
 using Dandy.Devices.USB.Libusb;
 
 namespace Dandy.LMS.NXT
@@ -21,7 +23,11 @@ namespace Dandy.LMS.NXT
 
     public sealed class ErrorException : Exception
     {
-        public ErrorException(Error error) : base(error.ToString())
+        public ErrorException(Error error) : this(error, null)
+        {
+        }
+
+        public ErrorException(Error error, Exception innerException) : base(error.ToString(), innerException)
         {
             Error = error;
         }
@@ -37,21 +43,22 @@ namespace Dandy.LMS.NXT
         const ushort idVendorAmtel = 0x03eb;
         const ushort idProductSamba = 0x6124;
 
-        Device dev;
-        DeviceHandle hdl;
+        IDeviceInfo info;
+        IDevice device;
+        BinaryReader reader;
+        BinaryWriter writer;
         bool isInResetMode;
 
-        public void Find()
+        public async Task Find()
         {
-            foreach (var dev in Device.List) {
-                var desc = dev.DeviceDescriptor;
-                if (desc.VendorId == idVendorAmtel && desc.ProductId == idProductSamba) {
-                    this.dev = dev;
+            foreach (var info in await Factory.FindAllAsync()) {
+                if (info.UsbVendorId == idVendorAmtel && info.UsbProductId == idProductSamba) {
+                    this.info = info;
                     isInResetMode = true;
                     return;
                 }
-                if (desc.VendorId == idVendorLEGO && desc.ProductId == idProductNXT) {
-                    this.dev = dev;
+                if (info.UsbVendorId == idVendorLEGO && info.UsbProductId == idProductNXT) {
+                    this.info = info;
                     return;
                 }
             }
@@ -59,75 +66,52 @@ namespace Dandy.LMS.NXT
             throw new ErrorException(Error.NotPresent);
         }
 
-        public void Open()
+        public async Task<object> Open()
         {
-            hdl = dev.Open();
-            try {
-                if (hdl.Configuration == 1) {
-                    if (hdl.IsKernelDriverActive(1)) {
-                        hdl.DetachKernelDriver(1);
-                    }
-                }
-                else {
-                    hdl.Configuration = 1;
-                }
-            }
-            catch (ErrorException) {
-                hdl.Dispose();
-                hdl = null;
+            device = await info.OpenAsync();
+            if (device == null) {
                 throw new ErrorException(Error.Configuration);
             }
-
-            try {
-                hdl.ClaimInterface(1);
-            }
-            catch (ErrorException) {
-                hdl.Dispose();
-                hdl = null;
-                throw new ErrorException(Error.InUse);
-            }
+            reader = new BinaryReader(device.InputStream, Encoding.ASCII);
+            writer = new BinaryWriter(device.OutputStream, Encoding.ASCII);
 
             // NXT handshake
             SendStr("N#");
             var buf = RecvBuf(2);
             if (buf[0] != '\n' || buf[1] != '\r') {
-                hdl.ReleaseInterface(1);
-                hdl.Dispose();
-                hdl = null;
+                device.Dispose();
+                device = null;
                 throw new ErrorException(Error.Handshake);
             }
+
+            return null;
         }
 
         public void Close()
         {
-            hdl?.ReleaseInterface(1);
-            hdl?.Dispose();
-            hdl = null;
+            reader?.Dispose();
+            writer?.Dispose();
+            device?.Dispose();
+            device = null;
         }
 
         public bool IsInResetMode => isInResetMode;
 
         void SendBuf(byte[] buf)
         {
-            int ret = hdl.BulkTransfer(0x1, buf);
-            if (ret < 0) {
-                throw new ErrorException(Error.USBWrite);
-            }
+            writer.Write(buf, 0, buf.Length);
+            writer.Flush();
         }
 
         void SendStr(string str)
         {
-            var asc = Encoding.ASCII.GetBytes(str);
-            SendBuf(asc);
+            writer.Write(str);
+            writer.Flush();
         }
 
         byte[] RecvBuf(int len)
         {
-            var buf = new byte[len];
-            var ret = hdl.BulkTransfer(0x82, buf);
-            if (ret < 0) {
-                throw new ErrorException(Error.USBRead);
-            }
+            var buf = reader.ReadBytes(len);
             return buf;
         }
 

@@ -1,3 +1,4 @@
+using System;
 using System.IO;
 
 namespace Dandy.LMS.NXT
@@ -33,40 +34,21 @@ namespace Dandy.LMS.NXT
             nxt.WaitReady();
         }
 
-        static void Validate(FileInfo info)
+        public static void Validate(byte[] data)
         {
-            try {
-                if (info.Length > 256 * 1024) {
-                    throw new ErrorException(Error.InvalidFirmware);
-                }
+            if (data == null) {
+                throw new ArgumentNullException(nameof(data));
             }
-            catch (ErrorException) {
-                throw;
-            }
-            catch {
-                throw new ErrorException(Error.File);
+            if (data.Length > 256 * 1024) {
+                throw new ErrorException(Error.InvalidFirmware);
             }
         }
 
-        public static void Validate(string fwPath)
+        public static void Flash(this Brick nxt, byte[] data)
         {
             try {
-                var info = new FileInfo(fwPath);
-                using (info.OpenRead()) {
-                    Validate(info);
-                }
-            }
-            catch {
-                throw new ErrorException(Error.File);
-            }
-        }
-
-        public static void Flash(this Brick nxt, string fwPath)
-        {
-            try {
-                var info = new FileInfo(fwPath);
-                using (var f = info.OpenRead()) {
-                    Validate(info);
+                using (var f = new MemoryStream(data)) {
+                    Validate(data);
                     nxt.FlashPrepare();
 
                     for (var i = 0u; i < 1024; i++) {
@@ -77,7 +59,6 @@ namespace Dandy.LMS.NXT
                             nxt.FlashFinish();
                             return;
                         }
-                        nxt.FlashBlock(i, buf);
                     }
                 }
                 nxt.FlashFinish();
@@ -85,8 +66,8 @@ namespace Dandy.LMS.NXT
             catch (ErrorException) {
                 throw;
             }
-            catch {
-                throw new ErrorException(Error.File);
+            catch (Exception ex) {
+                throw new ErrorException(Error.File, ex);
             }
         }
     }
