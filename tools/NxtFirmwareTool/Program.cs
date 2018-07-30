@@ -1,8 +1,8 @@
 ﻿using System;
 
-using Dandy.LMS.NXT;
+using Dandy.Lms.Nxt;
 
-namespace NXTFirmwareTool
+namespace NxtFirmwareTool
 {
     class Program
     {

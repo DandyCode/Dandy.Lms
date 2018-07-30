@@ -2,8 +2,8 @@
 
   <PropertyGroup>
     <TargetFramework>netstandard2.0</TargetFramework>
-    <RootNamespace>Dandy.LMS.NXT</RootNamespace>
-    <AssemblyName>Dandy.LMS.NXT</AssemblyName>
+    <RootNamespace>Dandy.Lms.Nxt</RootNamespace>
+    <AssemblyName>Dandy.Lms.Nxt</AssemblyName>
   </PropertyGroup>
 
   <ItemGroup>

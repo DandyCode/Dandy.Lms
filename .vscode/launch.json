@@ -5,12 +5,12 @@
    "version": "0.2.0",
    "configurations": [
         {
-            "name": "NXTFirmwareTool",
+            "name": "NxtFirmwareTool",
             "type": "coreclr",
             "request": "launch",
             "preLaunchTask": "build",
             // If you have changed target frameworks, make sure to update the program path.
-            "program": "${workspaceFolder}/tools/NXTFirmwareTool/bin/Debug/netcoreapp2.1/NXTFirmwareTool.dll",
+            "program": "${workspaceFolder}/tools/NxtFirmwareTool/bin/Debug/netcoreapp2.1/NxtFirmwareTool.dll",
             "args": [ "/usr/share/nxt-firmware/nxt_firmware.bin" ],
             // For more information about the 'console' field, see https://github.com/OmniSharp/omnisharp-vscode/blob/master/debugger-launchjson.md#console-terminal-window
             "console": "internalConsole",
