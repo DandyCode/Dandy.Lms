@@ -125,10 +125,13 @@
   </ItemGroup>
   <ItemGroup>
     <PackageReference Include="Dandy.Devices.Serial.Uwp">
-      <Version>1.0.0-a1.2</Version>
+      <Version>1.0.0-a1.3</Version>
     </PackageReference>
     <PackageReference Include="Microsoft.NETCore.UniversalWindowsPlatform">
       <Version>6.1.5</Version>
+    </PackageReference>
+    <PackageReference Include="ShellProgressBar">
+      <Version>4.0.0</Version>
     </PackageReference>
   </ItemGroup>
   <ItemGroup>

@@ -3,6 +3,7 @@ using System.Linq;
 using System.Runtime.InteropServices.WindowsRuntime;
 using System.Threading.Tasks;
 using Dandy.Lms.Nxt;
+using ShellProgressBar;
 using Windows.Storage;
 
 namespace Dandy.Lms.NxtFirmwareTool.Uwp
@@ -64,7 +65,9 @@ namespace Dandy.Lms.NxtFirmwareTool.Uwp
             Console.WriteLine("Starting firmware flash procedure now...");
 
             try {
-                await device.FlashAsync(fwData);
+                using (var progress = new ProgressHelper("flashing")) {
+                    await device.FlashAsync(fwData, progress);
+                }
             }
             catch (Exception ex) {
                 handleError(ex);
@@ -86,6 +89,26 @@ namespace Dandy.Lms.NxtFirmwareTool.Uwp
             }
             catch (Exception ex) {
                 handleError(ex);
+            }
+        }
+
+        sealed class ProgressHelper : IProgress<int>, IDisposable
+        {
+            readonly ProgressBar progressBar;
+
+            public ProgressHelper(string message)
+            {
+                progressBar = new ProgressBar(1024, message, Console.ForegroundColor);
+            }
+
+            public void Dispose()
+            {
+                progressBar?.Dispose();
+            }
+
+            void IProgress<int>.Report(int value)
+            {
+                progressBar.Tick(value);
             }
         }
     }

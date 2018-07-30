@@ -45,14 +45,16 @@ namespace Dandy.Lms.Nxt
             }
         }
 
-        public static async Task FlashAsync(this Samba nxt, byte[] data)
+        public static async Task FlashAsync(this Samba nxt, byte[] data, IProgress<int> progress)
         {
             using (var f = new MemoryStream(data)) {
                 Validate(data);
                 await nxt.FlashPrepareAsync();
 
+                var buf = new byte[256];
+
                 for (var i = 0u; i < 1024; i++) {
-                    var buf = new byte[256];
+                    progress?.Report((int)i);
                     var ret = f.Read(buf, 0, buf.Length);
                     await nxt.FlashBlockAsync(i, buf);
                     if (ret < 256) {
