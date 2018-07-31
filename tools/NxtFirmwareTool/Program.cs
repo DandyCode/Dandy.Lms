@@ -1,21 +1,24 @@
 ﻿using System;
-
+using System.IO;
+using System.Linq;
+using System.Threading.Tasks;
 using Dandy.Lms.Nxt;
+using ShellProgressBar;
 
-namespace NxtFirmwareTool
+namespace Dandy.Lms.NxtFirmwareTool.Uwp
 {
     class Program
     {
-        static Brick nxt;
+        static IDisposable nxt;
 
-        static void handleError(ErrorException ex)
+        static void handleError(Exception ex)
         {
             Console.WriteLine("Error: {0}", ex.Message);
-            nxt?.Close();
-            Environment.Exit((int)ex.Error);
+            nxt?.Dispose();
+            Environment.Exit(1);
         }
 
-        static void Main(string[] args)
+        static async Task Main(string[] args)
         {
             if (args.Length != 1) {
                 Console.Error.WriteLine("Missing firmware name argument");
@@ -23,43 +26,35 @@ namespace NxtFirmwareTool
             }
 
             var fwFile = args[0];
+            byte[] fwData = null;
             Console.Write("Checking firmware... ");
             try {
-                Firmware.Validate(fwFile);
+                fwData = File.ReadAllBytes(fwFile);
+                Firmware.Validate(fwData);
                 Console.WriteLine("OK.");
             }
-            catch (ErrorException ex) {
+            catch (Exception ex) {
+                handleError(ex);
+            }
+
+            Samba device = null;
+
+            try {
+                var devices = await Samba.FindAllAsync();
+                device = devices.FirstOrDefault();
+                if (device == null) {
+                    Console.Error.WriteLine("NXT not found. Is it properly plugged in via USB?");
+                    Environment.Exit(1);
+                }
+            }
+            catch (Exception ex) {
                 handleError(ex);
             }
 
             try {
-                nxt = new Brick();
+                nxt = await device.OpenAsync();
             }
-            catch (ErrorException ex) {
-                handleError(ex);
-            }
-
-            try {
-                nxt.Find();
-            }
-            catch (ErrorException ex) when (ex.Error == Error.NotPresent) {
-                Console.Error.WriteLine("NXT not found. Is it properly plugged in via USB?");
-                Environment.Exit(1);
-            }
-            catch (ErrorException ex) {
-                handleError(ex);
-            }
-
-            if (!nxt.IsInResetMode) {
-                Console.Error.WriteLine("NXT found, but not running in reset mode.");
-                Console.Error.WriteLine("Please reset your NXT manually and restart this program.");
-                Environment.Exit(2);
-            }
-
-            try {
-                nxt.Open();
-            }
-            catch (ErrorException ex) {
+            catch (Exception ex) {
                 handleError(ex);
             }
 
@@ -67,28 +62,50 @@ namespace NxtFirmwareTool
             Console.WriteLine("Starting firmware flash procedure now...");
 
             try {
-                nxt.Flash(fwFile);
+                using (var progress = new ProgressHelper("flashing")) {
+                    await device.FlashAsync(fwData, progress);
+                }
             }
-            catch (ErrorException ex) {
+            catch (Exception ex) {
                 handleError(ex);
             }
 
             Console.WriteLine("Firmware flash complete.");
 
             try {
-                nxt.Jump(0x00100000);
+                await device.GoAsync(0x00100000);
             }
-            catch (ErrorException ex) {
+            catch (Exception ex) {
                 handleError(ex);
             }
 
             Console.WriteLine("New firmware started!");
 
             try {
-                nxt.Close();
+                nxt.Dispose();
             }
-            catch (ErrorException ex) {
+            catch (Exception ex) {
                 handleError(ex);
+            }
+        }
+
+        sealed class ProgressHelper : IProgress<int>, IDisposable
+        {
+            readonly ProgressBar progressBar;
+
+            public ProgressHelper(string message)
+            {
+                progressBar = new ProgressBar(1024, message);
+            }
+
+            public void Dispose()
+            {
+                progressBar?.Dispose();
+            }
+
+            void IProgress<int>.Report(int value)
+            {
+                progressBar.Tick(value);
             }
         }
     }

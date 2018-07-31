@@ -7,7 +7,7 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="Dandy.Devices.Serial" Version="1.0.0-a1.2" />
+    <PackageReference Include="Dandy.Devices.Serial" Version="1.0.0-a1.3" />
   </ItemGroup>
 
 </Project>

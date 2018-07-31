@@ -31,8 +31,13 @@ namespace Dandy.Lms.Nxt
         public async Task<IDisposable> OpenAsync()
         {
             device = await info.OpenAsync();
-            device.InputStream.ReadTimeout = 500;
-            device.OutputStream.WriteTimeout = 500;
+            if (device.InputStream.CanTimeout) {
+                device.InputStream.ReadTimeout = 500;
+            }
+            if (device.OutputStream.CanTimeout) {
+                device.OutputStream.WriteTimeout = 500;
+            }
+            device.BaudRate = 115200;
 
             // NXT handshake
             await SetNormalModeAsync();

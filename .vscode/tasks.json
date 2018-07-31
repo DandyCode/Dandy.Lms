@@ -5,7 +5,7 @@
     "tasks": [
         {
             "label": "build",
-            "command": "dotnet build",
+            "command": "dotnet",
             "type": "shell",
             "group": {
                 "kind": "build",
@@ -14,7 +14,12 @@
             "presentation": {
                 "reveal": "silent"
             },
-            "problemMatcher": "$msCompile"
+            "problemMatcher": "$msCompile",
+            "linux": {
+                "args": [
+                    "build", "Lms.Linux.sln"
+                ]
+            }
         }
     ]
 }
