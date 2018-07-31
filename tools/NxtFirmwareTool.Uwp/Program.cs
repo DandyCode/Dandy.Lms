@@ -1,10 +1,15 @@
 using System;
 using System.Linq;
-using System.Runtime.InteropServices.WindowsRuntime;
 using System.Threading.Tasks;
 using Dandy.Lms.Nxt;
 using ShellProgressBar;
+
+#if WINDOWS_UWP
+using System.Runtime.InteropServices.WindowsRuntime;
 using Windows.Storage;
+#else
+using System.IO;
+#endif
 
 namespace Dandy.Lms.NxtFirmwareTool.Uwp
 {
@@ -30,9 +35,13 @@ namespace Dandy.Lms.NxtFirmwareTool.Uwp
             byte[] fwData = null;
             Console.Write("Checking firmware... ");
             try {
+#if WINDOWS_UWP
                 var file = await StorageFile.GetFileFromPathAsync(fwFile);
                 var buf = await FileIO.ReadBufferAsync(file);
                 fwData = buf.ToArray();
+#else
+                fwData = File.ReadAllBytes(fwFile);
+#endif
                 Firmware.Validate(fwData);
                 Console.WriteLine("OK.");
             }
@@ -98,7 +107,7 @@ namespace Dandy.Lms.NxtFirmwareTool.Uwp
 
             public ProgressHelper(string message)
             {
-                progressBar = new ProgressBar(1024, message, Console.ForegroundColor);
+                progressBar = new ProgressBar(1024, message);
             }
 
             public void Dispose()
