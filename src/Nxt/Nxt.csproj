@@ -6,8 +6,12 @@
     <AssemblyName>Dandy.Lms.Nxt</AssemblyName>
   </PropertyGroup>
 
-  <ItemGroup>
+  <ItemGroup Condition="'$(DandyLocalDev)' == ''">
     <PackageReference Include="Dandy.Devices.Serial" Version="1.0.0-a1.3" />
+  </ItemGroup>
+
+  <ItemGroup Condition="'$(DandyLocalDev)' != ''">
+    <ProjectReference Include="..\..\..\Dandy.Devices\src\Serial\Serial.csproj" />
   </ItemGroup>
 
 </Project>

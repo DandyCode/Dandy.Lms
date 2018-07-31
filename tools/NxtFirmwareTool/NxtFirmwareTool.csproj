@@ -10,8 +10,15 @@
     <ProjectReference Include="..\..\src\Nxt\Nxt.csproj" />
   </ItemGroup>
 
+  <ItemGroup Condition="'$(DandyLocalDev)' != ''">
+    <ProjectReference Include="..\..\..\Dandy.Devices\src\Serial.Linux\Serial.Linux.csproj" />
+  </ItemGroup>
+
   <ItemGroup>
     <PackageReference Include="ShellProgressBar" Version="4.0.1-dlech1" />
+  </ItemGroup>
+
+  <ItemGroup Condition="'$(DandyLocalDev)' != ''">
     <PackageReference Include="Dandy.Devices.Serial.Linux" Version="1.0.0-a1.9" />
   </ItemGroup>
 
