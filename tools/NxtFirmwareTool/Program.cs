@@ -1,6 +1,7 @@
 ﻿using System;
 using System.IO;
 using System.Linq;
+using System.Runtime.InteropServices;
 using System.Threading.Tasks;
 using Dandy.Lms.Nxt;
 using ShellProgressBar;
@@ -9,103 +10,96 @@ namespace Dandy.Lms.NxtFirmwareTool.Uwp
 {
     class Program
     {
-        static IDisposable nxt;
-
-        static void handleError(Exception ex)
+        static async Task<int> Main(string[] args)
         {
-            Console.WriteLine("Error: {0}", ex.Message);
-            nxt?.Dispose();
-            Environment.Exit(1);
-        }
+            if (args.Length > 1) {
+                Console.Error.WriteLine("Too many arguments");
+                return 1;
+            }
 
-        static async Task Main(string[] args)
-        {
-            if (args.Length != 1) {
-                Console.Error.WriteLine("Missing firmware name argument");
-                Environment.Exit(1);
+            if (args.Length < 1) {
+                Console.Error.WriteLine("Missing firmware file argument");
+                return 1;
             }
 
             var fwFile = args[0];
             byte[] fwData = null;
-            Console.Write("Checking firmware... ");
+            Console.Write("Reading firmware file... ");
             try {
                 fwData = File.ReadAllBytes(fwFile);
                 Firmware.Validate(fwData);
                 Console.WriteLine("OK.");
             }
             catch (Exception ex) {
-                handleError(ex);
+                Console.Error.WriteLine(ex.Message);
+                return 1;
             }
 
-            Samba device = null;
+            Console.Write("Searching for NXTs... ");
+            var devices = (await Samba.FindAllAsync()).ToList();
+            if (devices.Count == 0) {
+                Console.Error.WriteLine("None found.");
+                return 1;
+            }
+            Console.WriteLine("OK.");
 
-            try {
-                var devices = await Samba.FindAllAsync();
-                device = devices.FirstOrDefault();
-                if (device == null) {
-                    Console.Error.WriteLine("NXT not found. Is it properly plugged in via USB?");
-                    Environment.Exit(1);
+            var message = $"Finished flashing {{0}} of {devices.Count}";
+
+            using (var progressBar = new ProgressBar(devices.Count, string.Format(message, 0))) {
+
+                async Task loadFirmware(Samba device)
+                {
+                    var childProgressBar = new ProgressHelper(progressBar, $"NXT on {device.PortName}");
+                    try {
+                        using (await device.OpenAsync()) {
+                            // Write the firmware to flash memory
+                            await device.FlashAsync(fwData, childProgressBar);
+                            childProgressBar.ReportSuccess();
+                            // reboot NXT
+                            await device.GoAsync(0x00100000);
+                        }
+                    }
+                    catch (Exception ex) {
+                        childProgressBar.ReportError(ex.Message);
+                    }
+                    // hmm... possible race condition with progressBar.CurrentTick
+                    progressBar.Tick(string.Format(message, progressBar.CurrentTick + 1));
                 }
-            }
-            catch (Exception ex) {
-                handleError(ex);
+
+                await Task.WhenAll(devices.Select(d => loadFirmware(d)));
             }
 
-            try {
-                nxt = await device.OpenAsync();
-            }
-            catch (Exception ex) {
-                handleError(ex);
-            }
-
-            Console.WriteLine("NXT device in reset mode located and opened.");
-            Console.WriteLine("Starting firmware flash procedure now...");
-
-            try {
-                using (var progress = new ProgressHelper("flashing")) {
-                    await device.FlashAsync(fwData, progress);
-                }
-            }
-            catch (Exception ex) {
-                handleError(ex);
-            }
-
-            Console.WriteLine("Firmware flash complete.");
-
-            try {
-                await device.GoAsync(0x00100000);
-            }
-            catch (Exception ex) {
-                handleError(ex);
-            }
-
-            Console.WriteLine("New firmware started!");
-
-            try {
-                nxt.Dispose();
-            }
-            catch (Exception ex) {
-                handleError(ex);
-            }
+            return 0;
         }
 
-        sealed class ProgressHelper : IProgress<int>, IDisposable
+        sealed class ProgressHelper : IProgress<int>
         {
-            readonly ProgressBar progressBar;
+            readonly ChildProgressBar child;
 
-            public ProgressHelper(string message)
+            public ProgressHelper(ProgressBar parent, string message)
             {
-                progressBar = new ProgressBar(1024, message);
-            }
-
-            public void Dispose()
-            {
-                progressBar?.Dispose();
+                child = parent.Spawn(1024, message, new ProgressBarOptions {
+                    ForegroundColor = ConsoleColor.Yellow,
+                    ForegroundColorDone = ConsoleColor.Green,
+                    CollapseWhenFinished = false,
+                });
             }
 
             void IProgress<int>.Report(int value)
             {
-                progressBar.Tick(value);
+                child.Tick(value);
+            }
+
+            public void ReportSuccess()
+            {
+                child.Tick("Complete");
+                child.Dispose();
+            }
+
+            public void ReportError(string message)
+            {
+                // progressBar.ForeGroundColor = ConsoleColor.Red;
+                child.Tick($"Error: {message}");
             }
         }
     }

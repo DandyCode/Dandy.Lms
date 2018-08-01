@@ -23,6 +23,8 @@ namespace Dandy.Lms.Nxt
             return devices.Select(d => new Samba(d));
         }
 
+        public string PortName => info.PortName;
+
         Samba(DeviceInfo info)
         {
             this.info = info;
