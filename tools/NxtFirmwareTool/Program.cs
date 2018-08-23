@@ -4,6 +4,8 @@ using System.Linq;
 using System.Runtime.InteropServices;
 using System.Threading.Tasks;
 using Dandy.Lms.Nxt;
+using Dandy.Lms.Nxt.Commands;
+using Dandy.Lms.Nxt.Enumeration;
 using ShellProgressBar;
 
 namespace Dandy.Lms.NxtFirmwareTool.Uwp
@@ -36,16 +38,44 @@ namespace Dandy.Lms.NxtFirmwareTool.Uwp
             }
 
             Console.Write("Searching for NXTs... ");
-            var devices = (await Samba.FindAllAsync()).ToList();
-            if (devices.Count == 0) {
+            var findFwDevicesTask = Samba.FindAllAsync();
+            var findNxtUsbDevicesTask = NxtDevice.FindAllUsbAsync();
+
+            var fwDevices = (await findFwDevicesTask).ToList();
+            var nxtDevices = (await findNxtUsbDevicesTask).ToList();
+
+            var totalCount = fwDevices.Count + nxtDevices.Count;
+
+            if (totalCount == 0) {
                 Console.Error.WriteLine("None found.");
                 return 1;
             }
             Console.WriteLine("OK.");
 
-            var message = $"Finished flashing {{0}} of {devices.Count}";
+            var message = $"Finished flashing {{0}} of {totalCount}";
 
-            using (var progressBar = new ProgressBar(devices.Count, string.Format(message, 0))) {
+            using (var progressBar = new ProgressBar(totalCount, string.Format(message, 0))) {
+
+                async Task rebootToFirmwareMode(NxtDevice device)
+                {
+                    using (var childProgressBar = progressBar.Spawn(1, "Starting firmware loader...")) {
+                        try {
+                            using (var nxt = await device.ConnectAsync()) {
+                                if (await nxt.SendCommandAsync(SystemCommand.Boot())) {
+                                    // TODO: search for firmware device
+                                }
+                                else {
+                                    // TODO: error message
+                                }
+                            }
+                        }
+                        catch {
+
+                        }
+                    }
+                }
+
+                await Task.WhenAll(nxtDevices.Select(d => rebootToFirmwareMode(d)));
 
                 async Task loadFirmware(Samba device)
                 {
@@ -66,7 +96,7 @@ namespace Dandy.Lms.NxtFirmwareTool.Uwp
                     progressBar.Tick(string.Format(message, progressBar.CurrentTick + 1));
                 }
 
-                await Task.WhenAll(devices.Select(d => loadFirmware(d)));
+                await Task.WhenAll(fwDevices.Select(d => loadFirmware(d)));
             }
 
             return 0;
