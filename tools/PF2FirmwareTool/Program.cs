@@ -36,6 +36,8 @@ namespace PF2FirmwareTool
 
             protected override async Task<int> OnConnection(GattCharacteristic lwpChar)
             {
+                Console.WriteLine("Reading device info...");
+
                 Memory<byte> data = await File.ReadAllBytesAsync(FirmwareFile);
                 var memory = new MemoryStream();
                 var writer = new BinaryWriter(memory);
@@ -189,6 +191,9 @@ namespace PF2FirmwareTool
 
             public async Task<int> OnExecuteAsync()
             {
+                // Progress bar looks better when it isn't on the bottom line
+                Console.Clear();
+
                 Console.WriteLine("Press and hold the green button for 5 seconds to activeate the firmware upload program on the device.");
                 Console.WriteLine("Waiting for connection...");
 
