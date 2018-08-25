@@ -5,6 +5,17 @@
    "version": "0.2.0",
    "configurations": [
         {
+            "name": "PF2 Firmware Tool",
+            "type": "coreclr",
+            "request": "launch",
+            "preLaunchTask": "build",
+            "program": "${workspaceRoot}/tools/PF2FirmwareTool/bin/Debug/netcoreapp2.1/PF2FirmwareTool.dll",
+            "args": [ "flash-fw", "Lms.sln" ],
+            "cwd": "${workspaceRoot}",
+            "stopAtEntry": false,
+            "console": "externalTerminal"
+        },
+        {
             "name": "NxtFirmwareTool",
             "type": "coreclr",
             "request": "launch",
