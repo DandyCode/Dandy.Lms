@@ -20,6 +20,19 @@
                     "build", "Lms.Linux.sln"
                 ]
             }
+        },
+        {
+            "label": "build pf2-fw-tool",
+            "command": "dotnet",
+            "type": "shell",
+            "group": "build",
+            "presentation": {
+                "reveal": "silent"
+            },
+            "problemMatcher": "$msCompile",
+            "args": [
+                "build", "tools/PF2FirmwareTool"
+            ]
         }
     ]
 }

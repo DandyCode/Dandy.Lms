@@ -1,7 +1,7 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <AssemblyName>pfw-fw-tool</AssemblyName>
+    <AssemblyName>pf2-fw-tool</AssemblyName>
     <ToolCommandName>pf2-fw-tool</ToolCommandName>
     <PackAsTool>True</PackAsTool>
     <OutputType>Exe</OutputType>
