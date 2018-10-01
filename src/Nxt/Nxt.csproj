@@ -7,13 +7,7 @@
     <LangVersion>latest</LangVersion>
   </PropertyGroup>
 
-  <ItemGroup Condition="'$(DandyLocalDev)' == ''">
-    <PackageReference Include="Dandy.Devices.Bluetooth" Version="1.0.0-a1.0.0" />
-    <PackageReference Include="Dandy.Devices.Serial" Version="1.0.0-a1.3" />
-    <PackageReference Include="Dandy.Devices.Usb" Version="1.0.0-a1.0.0" />
-  </ItemGroup>
-
-  <ItemGroup Condition="'$(DandyLocalDev)' != ''">
+  <ItemGroup>
     <ProjectReference Include="..\..\..\Dandy.Devices\src\Bluetooth\Bluetooth.csproj" />
     <ProjectReference Include="..\..\..\Dandy.Devices\src\Serial\Serial.csproj" />
     <ProjectReference Include="..\..\..\Dandy.Devices\src\Usb\Usb.csproj" />

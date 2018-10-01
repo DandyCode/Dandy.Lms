@@ -10,16 +10,12 @@
     <ProjectReference Include="..\..\src\Nxt\Nxt.csproj" />
   </ItemGroup>
 
-  <ItemGroup Condition="'$(DandyLocalDev)' != ''">
+  <ItemGroup Condition="$([System.Runtime.InteropServices.RuntimeInformation]::IsOSPlatform($([System.Runtime.InteropServices.OSPlatform]::Linux)))">
     <ProjectReference Include="..\..\..\Dandy.Devices\src\Serial.Linux\Serial.Linux.csproj" />
   </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Include="ShellProgressBar" Version="4.0.1-dlech1" />
-  </ItemGroup>
-
-  <ItemGroup Condition="'$(DandyLocalDev)' != ''">
-    <PackageReference Include="Dandy.Devices.Serial.Linux" Version="1.0.0-a1.9" />
+    <PackageReference Include="ShellProgressBar" Version="4.1.1" />
   </ItemGroup>
 
 </Project>
