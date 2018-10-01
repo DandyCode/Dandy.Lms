@@ -5,7 +5,7 @@ using System.IO;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
-using Dandy.Devices.Bluetooth;
+using Dandy.Devices.BluetoothLE;
 using McMaster.Extensions.CommandLineUtils;
 using ShellProgressBar;
 

@@ -15,7 +15,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\..\..\Dandy.Devices\src\Bluetooth\Bluetooth.csproj" />
+    <ProjectReference Include="..\..\..\Dandy.Devices\src\BluetoothLE\BluetoothLE.csproj" />
   </ItemGroup>
 
 </Project>
