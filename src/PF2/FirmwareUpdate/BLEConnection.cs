@@ -9,7 +9,8 @@ using Dandy.Lms.Internal;
 namespace Dandy.Lms.PF2.FirmwareUpdate
 {
     /// <summary>
-    /// Class to manage a connection to a Powered Up programmable brick.
+    /// Class to manage a Bluetooth LE connection to a Powered Up
+    /// programmable brick in firmware update mode.
     /// </summary>
     public sealed class BLEConnection
     {
@@ -87,10 +88,10 @@ namespace Dandy.Lms.PF2.FirmwareUpdate
                 throw new ArgumentNullException(nameof(command));
             }
 
-            if (expectReply && command.ReplyRequirement == ReplyRequirement.Never) {
+            if (expectReply && !command.RequestTypes.HasFlag(RequestTypes.Reply)) {
                 throw new ArgumentException("This command cannot receive a reply", nameof(expectReply));
             }
-            else if (!expectReply && command.ReplyRequirement == ReplyRequirement.Always) {
+            else if (!expectReply && !command.RequestTypes.HasFlag(RequestTypes.NoReply)) {
                 throw new ArgumentException("This command must receive a reply", nameof(expectReply));
             }
 

@@ -22,7 +22,7 @@ namespace Dandy.Lms.PF2.FirmwareUpdate
         {
             var message = new byte[] { 0x11 };
 
-            return new Command<bool>(message, ReplyRequirement.Always, 2, reply => {
+            return new Command<bool>(message, RequestTypes.Reply, reply => {
                 return reply[1] == 0;
             });
         }
@@ -71,9 +71,8 @@ namespace Dandy.Lms.PF2.FirmwareUpdate
             BinaryPrimitives.WriteUInt32LittleEndian(message.Span.Slice(2, 4), startAddress);
             data.CopyTo(message.Slice(6).Span);
 
-            var replyRequirement = final ? ReplyRequirement.Always : ReplyRequirement.Never;
-            var replySize = final ? 6 : 0;
-            return new Command<(byte checksum, uint endAddress)>(message, replyRequirement, replySize, reply => {
+            var replyRequirement = final ? RequestTypes.Reply : RequestTypes.NoReply;
+            return new Command<(byte checksum, uint endAddress)>(message, replyRequirement, reply => {
                 var checksum = reply[1];
                 var count = BinaryPrimitives.ReadUInt32LittleEndian(reply.Slice(1, 4));
                 return (checksum, count);
@@ -93,7 +92,7 @@ namespace Dandy.Lms.PF2.FirmwareUpdate
         {
             var message = new byte[] { 0x33 };
 
-            return new Command<NoReply>(message, ReplyRequirement.Never, 0, reply => {
+            return new Command<NoReply>(message, RequestTypes.NoReply, reply => {
                 throw new InvalidOperationException("Should never receive a reply for the reboot command");
             });
         }
@@ -116,7 +115,7 @@ namespace Dandy.Lms.PF2.FirmwareUpdate
         {
             var message = new byte[] { 0x44 };
 
-            return new Command<bool>(message, ReplyRequirement.Always, 2, reply => {
+            return new Command<bool>(message, RequestTypes.Reply, reply => {
                 throw new InvalidOperationException("Should never receive a reply for the reboot command");
             });
         }
@@ -137,7 +136,7 @@ namespace Dandy.Lms.PF2.FirmwareUpdate
         {
             var message = new byte[] { 0x55 };
 
-            return new Command<(Version, uint, uint, HubType)>(message, ReplyRequirement.Always, 14, reply => {
+            return new Command<(Version, uint, uint, HubType)>(message, RequestTypes.Reply, reply => {
                 var fwVersion = VersionExtensions.ReadVersionLittleEndian(reply.Slice(1, 4));
                 var startAddress = BinaryPrimitives.ReadUInt32LittleEndian(reply.Slice(5, 4));
                 var endAddress = BinaryPrimitives.ReadUInt32LittleEndian(reply.Slice(9, 4));
@@ -158,7 +157,7 @@ namespace Dandy.Lms.PF2.FirmwareUpdate
         {
             var message = new byte[] { 0x66 };
 
-            return new Command<byte>(message, ReplyRequirement.Always, 2, reply => {
+            return new Command<byte>(message, RequestTypes.Reply, reply => {
                 return reply[1];
             });
         }
@@ -175,7 +174,7 @@ namespace Dandy.Lms.PF2.FirmwareUpdate
         {
             var message = new byte[] { 0x77 };
 
-            return new Command<FlashProtectionLevel>(message, ReplyRequirement.Always, 2, reply => {
+            return new Command<FlashProtectionLevel>(message, RequestTypes.Reply, reply => {
                 return (FlashProtectionLevel)reply[1];
             });
         }
@@ -191,9 +190,9 @@ namespace Dandy.Lms.PF2.FirmwareUpdate
         /// </remarks>
         public static Command<NoReply> Disconnect()
         {
-            var message = new byte[] { 0x77 };
+            var message = new byte[] { 0x88 };
 
-            return new Command<NoReply>(message, ReplyRequirement.Never, 0, reply => {
+            return new Command<NoReply>(message, RequestTypes.NoReply, reply => {
                 throw new InvalidOperationException("The disconnect command should never receive a reply");
             });
         }

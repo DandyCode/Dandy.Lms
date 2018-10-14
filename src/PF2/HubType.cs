@@ -1,4 +1,4 @@
-namespace Dandy.Lms.PF2.FirmwareUpdate
+namespace Dandy.Lms.PF2
 {
     /// <summary>
     /// Powered Up hub type.

@@ -1,7 +1,4 @@
 using System;
-using System.Buffers.Binary;
-using System.Collections.Generic;
-using System.Text;
 
 namespace Dandy.Lms.Internal
 {
@@ -12,7 +9,6 @@ namespace Dandy.Lms.Internal
     /// <typeparam name="T">The parameter(s) of the reply message.</typeparam>
     public sealed class Command<T>
     {
-        private readonly int replyLength;
         private readonly ReplyParser replyParser;
 
         /// <summary>
@@ -21,9 +17,9 @@ namespace Dandy.Lms.Internal
         public ReadOnlyMemory<byte> Message { get; }
 
         /// <summary>
-        /// Gets the reply requirement for this command.
+        /// Gets the reply requirements for this command.
         /// </summary>
-        public ReplyRequirement ReplyRequirement { get; }
+        public RequestTypes RequestTypes { get; }
 
         /// <summary>
         /// 
@@ -37,13 +33,11 @@ namespace Dandy.Lms.Internal
         /// </summary>
         /// <param name="message"></param>
         /// <param name="replyRequirement"></param>
-        /// <param name="replyLength"></param>
         /// <param name="replyParser"></param>
-        public Command(ReadOnlyMemory<byte> message, ReplyRequirement replyRequirement, int replyLength, ReplyParser replyParser)
+        public Command(ReadOnlyMemory<byte> message, RequestTypes replyRequirement, ReplyParser replyParser)
         {
             Message = message;
-            ReplyRequirement = replyRequirement;
-            this.replyLength = replyLength;
+            RequestTypes = replyRequirement;
             this.replyParser = replyParser ?? throw new ArgumentNullException(nameof(replyParser));
         }
 
@@ -52,18 +46,6 @@ namespace Dandy.Lms.Internal
         /// </summary>
         /// <param name="reply">The reply.</param>
         /// <returns></returns>
-        public T ParseReplay(ReadOnlySpan<byte> reply)
-        {
-            if (reply.Length == 0) {
-                throw new ArgumentOutOfRangeException("Reply is empty", nameof(reply));
-            }
-            if (reply.Length < replyLength) {
-                throw new ArgumentOutOfRangeException("Reply is too short", nameof(reply));
-            }
-            if (reply[0] != Message.Span[0]) {
-                throw new ArgumentException("Reply does not match command", nameof(reply));
-            }
-            return replyParser(reply);
-        }
+        public T ParseReplay(ReadOnlySpan<byte> reply) => replyParser(reply);
     }
 }
