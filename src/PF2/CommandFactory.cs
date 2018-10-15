@@ -137,6 +137,19 @@ namespace Dandy.Lms.PF2
         }
 
         /// <summary>
+        /// Resets the name of the programmable brick to the default value.
+        /// </summary>
+        /// <returns>The command.</returns>
+        public static Command<NoReply> ResetName()
+        {
+            var message = CreateMessage(Cmd.DeviceInfo, DeviceInfoSubcmd.Name, ReplyType.SetDefault);
+
+            return new Command<NoReply>(message, RequestTypes.NoReply, r => {
+                throw new InvalidOperationException();
+            });
+        }
+
+        /// <summary>
         /// Creates a new command that subscribes to name changes of programmable brick.
         /// </summary>
         /// <returns>The command.</returns>
@@ -161,11 +174,9 @@ namespace Dandy.Lms.PF2
             var message = CreateMessage(Cmd.DeviceInfo, DeviceInfoSubcmd.Name, ReplyType.Unsubscibe);
 
             return new Command<NoReply>(message, RequestTypes.NoReply, r => {
-                return ParseReply(r, Cmd.DeviceInfo, DeviceInfoSubcmd.Name, reply => default(NoReply));
+                throw new InvalidOperationException();
             });
         }
-
-        // TODO: there are also commands to subscribe/unsubscribe Name notifications and set default name
 
         /// <summary>
         /// Creates a new command to get the button state.
@@ -176,11 +187,35 @@ namespace Dandy.Lms.PF2
             var message = CreateMessage(Cmd.DeviceInfo, DeviceInfoSubcmd.Button, ReplyType.GetValue);
 
             return new Command<bool>(message, RequestTypes.Reply, r => {
-                return ParseReply(r, Cmd.DeviceInfo, DeviceInfoSubcmd.Name, reply => Convert.ToBoolean(reply[5]));
+                return ParseReply(r, Cmd.DeviceInfo, DeviceInfoSubcmd.Button, reply => Convert.ToBoolean(reply[5]));
             });
         }
 
-        // TODO: can also subscribe/unsubscribe from button value
+        /// <summary>
+        /// Creates a new command to subscribe to the button state.
+        /// </summary>
+        /// <returns>a new command</returns>
+        public static Command<bool> SubscribeButtonState()
+        {
+            var message = CreateMessage(Cmd.DeviceInfo, DeviceInfoSubcmd.Button, ReplyType.Subscribe);
+
+            return new Command<bool>(message, RequestTypes.Subscribe, r => {
+                return ParseReply(r, Cmd.DeviceInfo, DeviceInfoSubcmd.Button, reply => Convert.ToBoolean(reply[5]));
+            });
+        }
+
+        /// <summary>
+        /// Creates a new command to unsubscribe from the button state.
+        /// </summary>
+        /// <returns>a new command</returns>
+        public static Command<NoReply> UnsubscribeButtonState()
+        {
+            var message = CreateMessage(Cmd.DeviceInfo, DeviceInfoSubcmd.Button, ReplyType.Unsubscibe);
+
+            return new Command<NoReply>(message, RequestTypes.NoReply, r => {
+                throw new InvalidOperationException();
+            });
+        }
 
         /// <summary>
         /// Creates a new command to get the firmware version.
@@ -213,7 +248,7 @@ namespace Dandy.Lms.PF2
         }
 
         /// <summary>
-        /// Creates a new command to get the RSSI???
+        /// Creates a new command to get the RSSI
         /// </summary>
         /// <returns>A new command.</returns>
         public static Command<sbyte> GetRSSI()
@@ -227,7 +262,33 @@ namespace Dandy.Lms.PF2
             });
         }
 
-        // TODO: RSSI can also be subscribed/unsubscribed
+        /// <summary>
+        /// Creates a new command to subscribe to the RSSI
+        /// </summary>
+        /// <returns>A new command.</returns>
+        public static Command<sbyte> SubscribeRSSI()
+        {
+            var message = CreateMessage(Cmd.DeviceInfo, DeviceInfoSubcmd.RSSI, ReplyType.Subscribe);
+
+            return new Command<sbyte>(message, RequestTypes.Subscribe, r => {
+                return ParseReply(r, Cmd.DeviceInfo, DeviceInfoSubcmd.RSSI, reply => {
+                    return (sbyte)reply[5];
+                });
+            });
+        }
+
+        /// <summary>
+        /// Creates a new command to unsubscribe from the RSSI
+        /// </summary>
+        /// <returns>A new command.</returns>
+        public static Command<NoReply> UnsubscribeRSSI()
+        {
+            var message = CreateMessage(Cmd.DeviceInfo, DeviceInfoSubcmd.RSSI, ReplyType.Unsubscibe);
+
+            return new Command<NoReply>(message, RequestTypes.NoReply, r => {
+                throw new InvalidOperationException();
+            });
+        }
 
         /// <summary>
         /// Creates a new command to get battery level in percent full.
@@ -244,7 +305,33 @@ namespace Dandy.Lms.PF2
             });
         }
 
-        // TODO: Battery can also be subscribed/unsubscribed
+        /// <summary>
+        /// Creates a new command to subscribe to the battery level in percent full.
+        /// </summary>
+        /// <returns>A new command.</returns>
+        public static Command<byte> SubscribeBatteryPercent()
+        {
+            var message = CreateMessage(Cmd.DeviceInfo, DeviceInfoSubcmd.Battery, ReplyType.Subscribe);
+
+            return new Command<byte>(message, RequestTypes.Subscribe, r => {
+                return ParseReply(r, Cmd.DeviceInfo, DeviceInfoSubcmd.Battery, reply => {
+                    return reply[5];
+                });
+            });
+        }
+
+        /// <summary>
+        /// Creates a new command to sunubscribe from the battery levell.
+        /// </summary>
+        /// <returns>A new command.</returns>
+        public static Command<NoReply> UnsubscribeBatteryPercent()
+        {
+            var message = CreateMessage(Cmd.DeviceInfo, DeviceInfoSubcmd.Battery, ReplyType.Unsubscibe);
+
+            return new Command<NoReply>(message, RequestTypes.NoReply, r => {
+                throw new InvalidOperationException();
+            });
+        }
 
         /// <summary>
         /// Creates a new command to get the manufacturer name.
@@ -266,7 +353,7 @@ namespace Dandy.Lms.PF2
         /// Creates a new command to get the Bluetooth software version.
         /// </summary>
         /// <returns>A new command.</returns>
-        public static Command<string> GetBluetoothSoftwareVersion()
+        public static Command<string> GetBluetoothFirmwareVersion()
         {
             var message = CreateMessage(Cmd.DeviceInfo, DeviceInfoSubcmd.BlueNRG, ReplyType.GetValue);
 
@@ -297,7 +384,7 @@ namespace Dandy.Lms.PF2
         /// Creates a new command to get Bluetooth address.
         /// </summary>
         /// <returns>A new command.</returns>
-        public static Command<BluetoothAddress> GetBDAddress()
+        public static Command<BluetoothAddress> GetBluetoothAddress()
         {
             var message = CreateMessage(Cmd.DeviceInfo, DeviceInfoSubcmd.BDAddress, ReplyType.GetValue);
 
@@ -312,7 +399,7 @@ namespace Dandy.Lms.PF2
         /// Creates a new command to get Bluetooth address for the bootloader.
         /// </summary>
         /// <returns>A new command.</returns>
-        public static Command<BluetoothAddress> GetBootloaderBDAddress()
+        public static Command<BluetoothAddress> GetBootloaderBluetoothAddress()
         {
             var message = CreateMessage(Cmd.DeviceInfo, DeviceInfoSubcmd.BootloaderBDAddres, ReplyType.GetValue);
 

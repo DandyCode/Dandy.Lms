@@ -179,6 +179,8 @@ namespace Dandy.Lms.PF2
             var cmd = subscribe.Message.Span[2];
             var subcmd = subscribe.Message.Span[3];
 
+            // TODO: should probably check that unsubscribe cmd and subcmd match
+
             var disposer = new Disposer(() => {
                 replyHandlers.TryRemove((cmd, subcmd), out var _);
                 // TODO: should log exception if sending unsubscribe command fails
