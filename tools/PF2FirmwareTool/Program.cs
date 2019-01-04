@@ -198,14 +198,14 @@ namespace PF2FirmwareTool
                 Console.WriteLine("Waiting for connection...");
 
                 var info = await GetDeviceInfoAsync();
-                Console.WriteLine(info.Name);
-                Console.WriteLine(info.Address);
+                Console.WriteLine(info.advertisement.LocalName);
+                Console.WriteLine(info.address);
 
-                using (var device = await Device.FromIdAsync(info.Id)) {
+                using (var device = await Device.FromAddressAsync(info.address)) {
                     var services = await device.GetGattServicesAsync(bootloaderServiceUuid);
                     var lwpService = services.Single(x => x.Uuid == bootloaderServiceUuid);
-                    var characteristics = await lwpService.GetCharacteristicsAsync();
-                    var lwpChar = characteristics.Single(x => x.Uuid == bootloaderCharacteristicUuid);
+                    var characteristics = await lwpService.GetCharacteristicsAsync(bootloaderCharacteristicUuid);
+                    var lwpChar = characteristics.Single();
                     lwpChar.ValueChanged += (s, e) => {
                         notifyValue = e.Value;
                         notifyEvent.Set();
@@ -225,37 +225,13 @@ namespace PF2FirmwareTool
                 });
             }
 
-            Task<DeviceInfo> GetDeviceInfoAsync()
+            Task<(Advertisement advertisement, BluetoothAddress address)> GetDeviceInfoAsync()
             {
-                var source = new TaskCompletionSource<DeviceInfo>();
-                var candidates = new List<DeviceInfo>();
+                var source = new TaskCompletionSource<(Advertisement, BluetoothAddress)>();
 
-                var watcher = DeviceInfo.CreateWatcher();
-                watcher.Added += (s, e) => {
-                    if (!e.ServiceUuids.Contains(bootloaderServiceUuid)) {
-                        return;
-                    }
-
-                    // if not connected, defer until we see some activity
-                    if (!e.IsConnected) {
-                        candidates.Add(e);
-                        return;
-                    }
-
-                    source.TrySetResult(e);
-                    watcher.Stop();
-                };
-
-                watcher.Updated += (s, e) => {
-                    var match = candidates.SingleOrDefault(x => x.Id == e.Id);
-                    if (match == null) {
-                        return;
-                    }
-
-                    match.Update(e);
-
-                    // since a property was updated, we know this device is on and in range now
-                    source.TrySetResult(match);
+                var watcher = new AdvertisementWatcher(bootloaderServiceUuid);
+                watcher.Received += (s, e) => {
+                    source.TrySetResult((e.Advertisement, e.Address));
                     watcher.Stop();
                 };
 
