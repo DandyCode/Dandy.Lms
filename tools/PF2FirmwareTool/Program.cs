@@ -150,6 +150,13 @@ namespace PF2FirmwareTool
 
                 await lwpChar.WriteValueAsync(new byte[] { 0x33 }, GattWriteOption.WriteWithoutResponse);
 
+                // On Windows/UWP, the brick will not receive the message if
+                // we exit the program right away. So, we wait for the Bluetooth
+                // connection to go away.
+                while (lwpChar.Service.Device.IsConnected) {
+                    // TODO: implement timeout
+                }
+
                 return 0;
             }
         }
