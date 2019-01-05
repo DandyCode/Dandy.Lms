@@ -9,7 +9,7 @@
             "type": "coreclr",
             "request": "launch",
             "preLaunchTask": "build pf2-fw-tool",
-            "program": "${workspaceRoot}/tools/PF2FirmwareTool/bin/Debug/netcoreapp2.1/pf2-fw-tool.dll",
+            "program": "${workspaceRoot}/tools/PF2FirmwareTool/bin/Debug/netcoreapp3.0/pf2-fw-tool.dll",
             "args": [ "flash-fw", "Lms.sln" ],
             "cwd": "${workspaceRoot}",
             "stopAtEntry": false,
