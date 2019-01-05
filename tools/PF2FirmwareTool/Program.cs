@@ -178,6 +178,15 @@ namespace PF2FirmwareTool
             }
         }
 
+        sealed class AdvertismentWatcherException : System.Exception
+        {
+            public AdvertismentWatcherException(AdvertisementWatcherError error) {
+                Error = error;
+            }
+
+            public AdvertisementWatcherError Error { get; }
+        }
+
         abstract class Subcommand
         {
             static readonly Guid bootloaderServiceUuid = new Guid("00001625-1212-efde-1623-785feabcd123");
@@ -194,24 +203,43 @@ namespace PF2FirmwareTool
                 // Progress bar looks better when it isn't on the bottom line
                 Console.Clear();
 
-                Console.WriteLine("Press and hold the green button for 5 seconds to activeate the firmware upload program on the device.");
+                Console.WriteLine("Press and hold the green button for 5 seconds to activate the firmware upload program on the device.");
                 Console.WriteLine("Waiting for connection...");
 
-                var info = await GetDeviceInfoAsync();
-                Console.WriteLine(info.advertisement.LocalName);
-                Console.WriteLine(info.address);
+                try {
+                    var info = await GetDeviceInfoAsync();
+                    Console.WriteLine(info.advertisement.LocalName);
+                    Console.WriteLine(info.address);
 
-                using (var device = await Device.FromAddressAsync(info.address)) {
-                    var services = await device.GetGattServicesAsync(bootloaderServiceUuid);
-                    var lwpService = services.Single(x => x.Uuid == bootloaderServiceUuid);
-                    var characteristics = await lwpService.GetCharacteristicsAsync(bootloaderCharacteristicUuid);
-                    var lwpChar = characteristics.Single();
-                    lwpChar.ValueChanged += (s, e) => {
-                        notifyValue = e.Value;
-                        notifyEvent.Set();
-                    };
-                    await lwpChar.StartNotifyAsync();
-                    return await OnConnection(lwpChar);
+                    using (var device = await Device.FromAddressAsync(info.address)) {
+                        var services = await device.GetGattServicesAsync(bootloaderServiceUuid);
+                        var lwpService = services.Single(x => x.Uuid == bootloaderServiceUuid);
+                        var characteristics = await lwpService.GetCharacteristicsAsync(bootloaderCharacteristicUuid);
+                        var lwpChar = characteristics.Single();
+                        lwpChar.ValueChanged += (s, e) => {
+                            notifyValue = e.Value;
+                            notifyEvent.Set();
+                        };
+                        await lwpChar.StartNotifyAsync();
+                        return await OnConnection(lwpChar);
+                    }
+                }
+                catch (AdvertismentWatcherException ex) {
+                    switch (ex.Error) {
+                    case AdvertisementWatcherError.TurnedOff:
+                        Console.Error.WriteLine("Bluetooth is turned off. Turn it on and try again.");
+                        break;
+                    case AdvertisementWatcherError.Unauthorized:
+                        Console.Error.WriteLine("Not authorized to use Bluetooth.");
+                        break;
+                    case AdvertisementWatcherError.Unsupported:
+                        Console.Error.WriteLine("Bluetooth not supported on this platform.");
+                        break;
+                    default:
+                        Console.Error.WriteLine("Unknown Bluetooth error.");
+                        break;
+                    }
+                    return 1;
                 }
             }
 
@@ -236,7 +264,12 @@ namespace PF2FirmwareTool
                 };
 
                 watcher.Stopped += (s, e) => {
-                    source.TrySetCanceled();
+                    if (e.Error != AdvertisementWatcherError.None) {
+                        source.TrySetException(new AdvertismentWatcherException(e.Error));
+                    }
+                    else {
+                        source.TrySetCanceled();
+                    }
                 };
 
                 watcher.Start();
